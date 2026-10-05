@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="奶蛙工厂——od厂长的罐头工厂，蛋蛋帮他抓遍天下奶蛙！">
+<title>奶蛙工厂</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><circle cx='32' cy='36' r='24' fill='%237ed957'/><circle cx='22' cy='26' r='8' fill='%23fff' stroke='%23222' stroke-width='3'/><circle cx='42' cy='26' r='8' fill='%23fff' stroke='%23222' stroke-width='3'/><circle cx='22' cy='27' r='3' fill='%23222'/><circle cx='42' cy='27' r='3' fill='%23222'/><path d='M20 44 Q32 54 44 44' stroke='%23222' stroke-width='4' fill='none' stroke-linecap='round'/></svg>">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="page">
+  <div class="hud">
+    <div class="hgroup">
+      <div class="stat"><span>分数</span><b id="score">$0</b></div>
+      <div class="stat"><span>目标</span><b id="target">$800</b></div>
+    </div>
+    <div class="hbtns">
+      <button id="btnQuit" class="hbtn" type="button">回工厂</button>
+      <button id="btnDexHud" class="hbtn" type="button">奶蛙图鉴</button>
+    </div>
+    <div class="hgroup">
+      <div class="stat" id="timeStat"><span>时间</span><b id="time">45</b></div>
+      <div class="stat"><span>关卡</span><b id="level">1</b></div>
+    </div>
+    <div class="hbtns">
+      <button id="btnPause" class="iconbtn" type="button" title="暂停 / 继续">
+        <svg viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" fill="currentColor"/><rect x="14" y="5" width="4" height="14" fill="currentColor"/></svg>
+      </button>
+      <button id="btnSettings" class="iconbtn" type="button" title="设置">
+        <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" fill="currentColor"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="stage">
+    <canvas id="game" width="800" height="600"></canvas>
+
+    <!-- 工厂首页 -->
+    <div id="ovFactory" class="factoryScreen">
+      <div class="factoryLeft">
+        <h1 class="factoryTitle">奶蛙工厂</h1>
+        <div id="btnPlay" class="frogBtn" role="button" tabindex="0">
+          <canvas id="playFrog" width="96" height="96"></canvas>
+          <span class="frogBtnLabel">开始游戏</span>
+        </div>
+        <div id="btnInfinite" class="frogBtn alt" role="button" tabindex="0">
+          <span class="infIcon" aria-hidden="true">∞</span>
+          <span class="frogBtnLabel">无限模式</span>
+        </div>
+        <p class="factoryTip">无限模式：关卡不设上限，分数跨关累计，越往后每关涨幅越大</p>
+        <div class="factorySub">
+          <button id="btnIntro" class="smallbtn" type="button">游戏背景</button>
+          <button id="btnDex" class="smallbtn" type="button">奶蛙图鉴</button>
+        </div>
+        <div class="difficultyBar">
+          <button class="diffBtn active" data-diff="easy" type="button">简单</button>
+          <button class="diffBtn" data-diff="medium" type="button">中等</button>
+          <button class="diffBtn" data-diff="hard" type="button">困难</button>
+        </div>
+      </div>
+      <div class="factoryRight">
+        <canvas id="bossFrog" width="300" height="360"></canvas>
+      </div>
+    </div>
+
+    <!-- 游戏背景（分镜） -->
+    <div id="ovIntro" class="introScreen hidden">
+      <canvas id="introCanvas" width="560" height="300"></canvas>
+      <div id="introContent" class="introScene"></div>
+      <div class="introArrow">点击继续 ▶</div>
+    </div>
+
+    <!-- 开局说明 -->
+    <div id="ovMenu" class="overlay hidden">
+      <div class="card">
+        <h1>奶蛙矿工</h1>
+        <div class="frogs">
+          <canvas id="menuFrogBig" width="90" height="110"></canvas>
+          <canvas id="menuFrogSmall" width="70" height="70"></canvas>
+        </div>
+        <ul class="rules">
+          <li>你是蛋蛋，od厂长的手下，负责抓奶蛙</li>
+          <li>每关有一只稀有小奶蛙，抓到可解锁图鉴</li>
+          <li>冰块会随时间融化变小变便宜，趁大快抓</li>
+          <li>连续空钩会惹od厂长生气</li>
+          <li>空格 / 鼠标 / 手指点按 = 放钩，再按一次 = 提前收钩</li>
+        </ul>
+        <button id="btnStart" class="bigbtn" type="button">开始挖矿</button>
+      </div>
+    </div>
+
+    <!-- 暂停 -->
+    <div id="ovPause" class="overlay hidden">
+      <div class="card">
+        <h1 style="font-size:28px;">暂停中</h1>
+        <div class="row"><button id="btnResume" class="smallbtn" type="button">继续游戏</button></div>
+      </div>
+    </div>
+
+    <!-- 设置 -->
+    <div id="ovSettings" class="overlay hidden">
+      <div class="card setCard">
+        <h1 style="font-size:28px;">设置</h1>
+        <div class="setRow">
+          <div class="setLabel"><span>背景音乐</span><span class="setVal" id="bgmVal">25%</span></div>
+          <input id="bgmRange" type="range" min="0" max="100" step="1" value="25" aria-label="背景音乐音量">
+        </div>
+        <div class="setRow">
+          <div class="setLabel"><span>特效音乐</span><span class="setVal" id="fxVal">100%</span></div>
+          <input id="fxRange" type="range" min="0" max="100" step="1" value="100" aria-label="特效音乐音量">
+        </div>
+        <div class="setDivider"></div>
+        <div class="row"><button id="btnClearData" class="smallbtn danger" type="button">清除数据</button></div>
+        <p class="setWarn">清空所有关卡进度与图鉴收集记录</p>
+        <div class="row"><button id="btnSettingsClose" class="smallbtn" type="button">返回</button></div>
+      </div>
+    </div>
+
+    <!-- 清除确认 -->
+    <div id="ovConfirm" class="overlay hidden">
+      <div class="card setCard">
+        <h1 style="font-size:26px;">确认清除？</h1>
+        <p class="setWarn" style="margin-top:12px;">将清空所有关卡进度、图鉴收集记录与设置，此操作无法撤销。</p>
+        <div class="row">
+          <button id="btnConfirmClear" class="smallbtn danger" type="button">确认清除</button>
+          <button id="btnCancelClear" class="smallbtn" type="button">取消</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 过关 -->
+    <div id="ovClear" class="overlay hidden">
+      <div class="card">
+        <h1 style="font-size:30px;">厂长满意！</h1>
+        <p class="sub" id="clearText">本关累计 $0</p>
+        <div class="row"><button id="btnNext" class="bigbtn" type="button">下一关</button></div>
+      </div>
+    </div>
+
+    <!-- 失败 -->
+    <div id="ovOver" class="overlay hidden">
+      <div class="card">
+        <h1 style="font-size:26px;line-height:1.35;">厂长大发雷霆！<br>你输给了狡猾的奶蛙！</h1>
+        <p class="sub" id="overText">还差 $0 没抓够</p>
+        <div class="row">
+          <button id="btnRetry" class="smallbtn" type="button">再试一次</button>
+          <button id="btnMenu" class="smallbtn" type="button">回工厂</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 图鉴 -->
+    <div id="ovDex" class="overlay hidden">
+      <div class="card" style="max-width:560px;">
+        <h1 style="font-size:26px;">奶蛙图鉴</h1>
+        <p class="sub" id="dexCount">已收集 0 / 0</p>
+        <div class="dexGrid" id="dexGrid"></div>
+        <div class="row"><button id="btnDexClose" class="smallbtn" type="button">返回</button></div>
+      </div>
+    </div>
+
+    <!-- 稀有发现 -->
+    <div id="ovRareShow" class="rareShow hidden">
+      <canvas id="rareCanvas" width="360" height="360"></canvas>
+      <div class="rareLabel" id="rareShowLabel"></div>
+      <div class="rareTag">稀 有 发 现</div>
+    </div>
+  </div>
+
+  <p class="hint"><kbd>空格</kbd> / 点击画面 / 手指点按 = 放钩　·　再按一次 = 提前收钩　·　<kbd>P</kbd> 暂停　·　<kbd>M</kbd> 静音</p>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/game.js"></script>
+<script src="js/render.js"></script>
+<script src="js/ui.js"></script>
+</body>
+</html>
