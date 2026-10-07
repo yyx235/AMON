@@ -288,7 +288,7 @@ function genLevel(n){
       }
       if(free){
         G.items.push({ type: 'rare', rareId: chosen.id, rareName: chosen.name,
-          x: rx, y: ry, r: 36, w: 72, h: 80, value: ITEMCFG.rare.value(),
+          x: rx, y: ry, r: 36, w: 72, h: 80, value: chosen.val || ITEMCFG.rare.value(),
           grabbed: false, collected: false });
         pass = 2;
         break;
@@ -428,6 +428,8 @@ function swingOnly(dt){
 }
 function updateClaw(dt){
   var c = G.claw;
+  /* 抓到奶娃后「向上提的整个过程」持续大笑：每帧同步起停（laugh.js syncCatchLaugh） */
+  if(typeof syncCatchLaugh === 'function') syncCatchLaugh(c.st === 'retract' ? c.item : null);
   if(c.st === 'swing'){
     swingOnly(dt);
   } else if(c.st === 'drop'){
@@ -470,6 +472,8 @@ function updateClaw(dt){
           vy: rand(-90, -40), g: 280, life: 0.45, max: 0.45, size: 3, color: '#d8f6ff' });
       }
     }
+    /* 问号袋：改用抓取时随机定下的收钩速度（见 data.js BAG_PULL），耗时落在奶娃区间内 */
+    if(c.item && c.item.pullSpeed) sp = c.item.pullSpeed;
     c.len -= sp * dt;
     if(c.item){ var t2 = tip(); c.item.x = t2.x; c.item.y = t2.y; }
     if(c.len <= MINLEN){ deliver(); c.st = 'swing'; c.item = null; }
@@ -533,7 +537,11 @@ function grab(it){
     if(G.missCount >= 3){ G.odAngry = 2.5; G.missCount = 0; pop(400, 60, '厂长生气了！', 22, '#ff6b5e', TOAST.boss); }
   } else if(it.type === 'ice'){
     G.laughClock = 0.0001;
-    SND.ice(iceRate(it));
+    /* 抓冰音效 = 原作提取的 冰/冰冰/冰冰冰（ice-sfx.js 按 it.cubes 选 1~3 档，只播一遍）；
+       抓住瞬间即响（上面 c.st 已置 'retract'，收钩上升途中），n 与到顶结算同一字段；
+       原 SND.ice 合成音完全替换，文件缺失时静默跳过、游戏照常 */
+    if(typeof playIceCatch === 'function') playIceCatch(it.cubes, iceRate(it));
+
     G.missCount = 0;
     sparkle(it.x, it.y);
     pop(it.x, it.y - it.h / 2 - 12, it.cubes + '连冰！', 18, '#bfe9ff');
@@ -544,9 +552,15 @@ function grab(it){
     /* 小矮人：抓住后开始挣扎计时（耐久见 ITEMCFG.dwarf.hp），收回家结算价值 2 */
     c.struggleT = 0;
     SND.dwarfGrab();
+    /* 抓住瞬间（上面 c.st 已置 'retract'，收钩上升途中）响抖音原声「你的胆子真是肥嘟嘟的」
+       （dwarf-voice.js：同一钩只在本处触发一次；连续抓挂 1 个 pending 接续不截断；
+         挣脱/结算不打断不重播；音量只读 SND.fxVol；文件缺失静默跳过、游戏照常） */
+    if(typeof playDwarfVoice === 'function') playDwarfVoice();
     G.shake = 0.25;
     pop(it.x, it.y - it.h / 2 - 14, '抓住了！在挣扎！', 18, '#ffd75e');
   } else if(it.type === 'bag'){
+    /* 每个袋子抓取瞬间随机一个收钩速度（区间见 data.js BAG_PULL，与袋子价值完全无关） */
+    it.pullSpeed = rand(BAG_PULL.min, BAG_PULL.max);
     /* 问号袋：抓取过程只显示「？」，真实价值要 deliver 才揭晓 */
     SND.coinUp();
     sparkle(it.x, it.y);
@@ -607,6 +621,8 @@ function deliver(){
     sparkle(400, 150);
   } else {
     SND.coin();
+    /* 持续大笑在 updateClaw 收钩时已循环播放，钩子到顶这里收口停音 */
+    if(typeof stopCatchLaugh === 'function') stopCatchLaugh();
     pop(400, 108, '+' + totalGain, 27, '#ffe14d');
     if(it.type === 'big'){
       G.shake = Math.max(G.shake, 0.3);

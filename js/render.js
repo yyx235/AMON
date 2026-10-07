@@ -430,6 +430,17 @@ function drawDwarf(g, cx, cy, w, h, o){
   var bob = o.walk ? Math.sin(t * 6 + (o.ph || 0)) * h * 0.03 : 0;
   g.translate(0, bob);
 
+  /* 小矮人贴图：有素材就等比适配居中画进原版 35x39 框内（flip/bob 已在此层生效），
+     保持原始比例不拉伸、不越框；素材未加载完则回退下方原矢量造型 */
+  if(imgOK(IMG.dwarf)){
+    var kAr = IMG.dwarf.naturalWidth / IMG.dwarf.naturalHeight;
+    var kDw = w, kDh = w / kAr;
+    if(kDh > h){ kDh = h; kDw = h * kAr; }
+    g.drawImage(IMG.dwarf, cx - kDw / 2, cy - kDh / 2, kDw, kDh);
+    g.restore();
+    return;
+  }
+
   /* 铁镐（背后） */
   g.strokeStyle = '#8a5a1f'; g.lineWidth = Math.max(2, w * 0.05);
   g.beginPath();
@@ -893,6 +904,17 @@ function drawBag(g, cx, cy, w, h, o){
   var pulse = 1 + Math.sin(t * 3.1) * 0.02;
   g.scale(pulse, pulse);
   g.translate(-cx, -cy);
+
+  /* 问号袋贴图（冰红茶瓶）：有素材就等比适配居中画进原版 44x52 框内，
+     上面的呼吸/挣扎旋转缩放已生效；素材未加载完则回退下方矢量布袋 */
+  if(imgOK(IMG.bag)){
+    var bagAr = IMG.bag.naturalWidth / IMG.bag.naturalHeight;
+    var bagDw = w, bagDh = w / bagAr;
+    if(bagDh > h){ bagDh = h; bagDw = h * bagAr; }
+    g.drawImage(IMG.bag, cx - bagDw / 2, cy - bagDh / 2, bagDw, bagDh);
+    g.restore();
+    return;
+  }
 
   /* 袋身：上窄下宽的鼓布袋 */
   var grad = g.createLinearGradient(cx - w * 0.5, cy - h * 0.5, cx + w * 0.5, cy + h * 0.5);

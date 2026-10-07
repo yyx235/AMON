@@ -9,6 +9,11 @@ var MAXA = 1.05, FREQ = 0.5;     // 摆动幅度（弧度）与频率
 var DROP_SPEED = 330;            // 下放速度 px/s
 var RETRACT_EMPTY = 420;         // 空钩收回速度
 var SPEED = { small: 250, tiny: 285, big: 70, diamond: 330, rock: 90, rare: 260, ice: 120, dwarf: 210, bag: 160 };
+/* 问号袋（冰红茶）收钩速度随机区间：抓上来耗时必须落在「抓不同大小奶娃」的耗时区间内（同钩索长度下）
+   最快端 = 极小奶娃 SPEED.tiny = 285 px/s；最慢端 = 大奶蛙「一顿一顿」的实际平均速度
+   SPEED.big × (0.4×1 + 0.6×0.05 = 0.43) ≈ 30.1 px/s（game.js big 分支 ph>0.4 时 sp×0.05，60% 时间在停顿）
+   grab() 时对每个袋子在 [min,max] 均匀随机取一个速度 → 每只耗时都不同，且与袋子价值完全无关 */
+var BAG_PULL = { min: +(SPEED.big * 0.43).toFixed(1), max: SPEED.tiny };
 var FONT = '"ZCOOL KuaiLe","Microsoft YaHei","PingFang SC",sans-serif';
 var LEVEL_TIME = 45;             // 每关秒数
 var ICE_ROCK_PER_CUBE = 1;       // 1 块冰 = ICE_ROCK_PER_CUBE × 单块石头价（下面乘以 10）
@@ -63,9 +68,11 @@ var ITEMCFG = {
   diamond: { r: 18, w: 26,  h: 26,  value: function(){ return 600; } },
   rock:    { r: 38, w: 56,  h: 54,  value: function(){ return 1 + Math.floor(Math.random() * 10); } },
   rare:    { r: 36, w: 72,  h: 80,  value: function(){ return 250; } },
-  /* 问号袋：纯矢量画布袋，价值开局生成时随机定死 1~800，deliver 时才揭晓
-     抓取速度 SPEED.bag = 160（比小奶蛙 250 慢、比大奶蛙 70 快 → 中等重量的布袋） */
-  bag:     { r: 22, w: 44,  h: 52,  value: function(){ return BAG_RANGE.min + Math.floor(Math.random() * (BAG_RANGE.max - BAG_RANGE.min + 1)); } },
+  /* 问号袋=冰红茶瓶贴图（assets/bag.webp），价值开局生成时随机定死 1~800，deliver 时才揭晓
+     抓取速度 SPEED.bag = 160（比小奶蛙 250 慢、比大奶蛙 70 快 → 中等重量的布袋）
+     2026-10-06 整体放大 2 倍（r 22→44、w 44→88、h 52→104）：素材 251×460 上「冰红茶」文字块实测 170×82px，
+     原 h=52 画出来单字仅 6.4×9.3px 看不清；h=104 时单字 12.8×18.5px 可读，故整体翻倍 */
+  bag:     { r: 44, w: 88,  h: 104, value: function(){ return BAG_RANGE.min + Math.floor(Math.random() * (BAG_RANGE.max - BAG_RANGE.min + 1)); } },
   /* 小矮人（仅无限模式出现，仿《黄金矿工》矮人）
      r/w/h : 建模与碰撞/占位尺寸已统一按 DWARF_SCALE(0.65) 缩小（≈普通奶蛙的 60~70%）
      value : 抓回家结算价值 = 2（方案B可抓，用户选定；抓住后须在挣扎耐久内收回家）
@@ -101,7 +108,17 @@ var RARE = [
   { id: 9,  name: '生气蛙',   value: 550 },
   { id:10,  name: '打工奶龙', value: 620 },
   { id:11,  name: '摆烂奶龙', value: 657 },
-  { id:12,  name: '摸鱼奶龙', value: 694 }
+  { id:12,  name: '摸鱼奶龙', value: 694 },
+  /* 慈爱娃：阶段1新增（用户拍板价值档 500 = big 档）；
+     val 是它专属的结算价值字段，game.js 用 chosen.val || ITEMCFG.rare.value() 取，
+     老条目没有 val 字段 → 仍走 ITEMCFG.rare 的 250，不受影响 */
+  { id:13,  name: '慈爱娃',   value: 500, val: 500 },
+  /* 民大娃：中央民族大学校徽款，结算价值 1000（val 专属字段，game.js:291 取 chosen.val） */
+  { id:14,  name: '民大娃',   value: 1000, val: 1000 },
+  /* 愤怒娃：红横幅「切换愤怒模式」已去除，价值 500（用户指定） */
+  { id:15,  name: '愤怒娃',   value: 500, val: 500 },
+  /* 天使娃：金色天使款（原图自带透明底，原样存入），价值 500（用户指定） */
+  { id:16,  name: '天使娃',   value: 500, val: 500 },
 ];
 
 /* ===== 建模素材：直接引用原站图片 =====
@@ -123,6 +140,8 @@ var IMG = {
   odAngry:loadImg('od-angry.webp'),
   diamond:loadImg('diamond-small.webp'),
   ice:    [loadImg('ice-1.webp'), loadImg('ice-2.webp'), loadImg('ice-3.webp')],
+  dwarf:  loadImg('dwarf.webp'),
+  bag:    loadImg('bag.webp'),
   rare:   {}
 };
 RARE.forEach(function(r){ IMG.rare[r.id] = loadImg('frog-rare-' + r.id + '.webp'); });
